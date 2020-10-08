@@ -1,0 +1,11 @@
+CREATE TABLE Addresses(
+    id UUID NOT NULL PRIMARY KEY,
+    userId UUID NOT NULL,
+    street VARCHAR(150) NOT NULL,
+    additionalInfo VARCHAR(150) NULL,
+    city VARCHAR(150) NOT NULL,
+    state VARCHAR(150) NOT NULL,
+    zipCode VARCHAR(30) NOT NULL,
+    createdAt DATE DEFAULT(CURRENT_TIMESTAMP),
+    CONSTRAINT fk_user FOREIGN KEY (userId) REFERENCES Users(id)
+);

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Nano Commerce API</title>
+    <link rel="stylesheet" th:href="@{/../static/css/styles.css}" type="text/css">
+    <link rel="icon" th:href="@{/../static/files/images/logo.png}">
+    <!--[if lt IE 9]><script src="scripts/html5shiv.js"></script><![endif]-->
+</head>
+<body th:style="'background:' + @{theme} + ';'">
+<header class="app-header">
+    <div th:class="${themeBtn}"></div>
+</header>
+
+<h1 style="width: 100%;text-align:center;margin-bottom:3vh;">Edit article below</h1>
+
+<div class="form-container">
+    <form th:action="@{/news/update}" method="post" th:object="${newArticle}" class="app-form" enctype="multipart/form-data">
+        <a class="app-btn" style="background:blue;margin-bottom:1vh;" th:href="@{/news/editwithimage/{articleId}(articleId=${newArticle.id})}">Include Image</a>
+        <img th:src="${articleImage}" style="width: 20vw;height: 30vh;margin-bottom:2vh;">
+        <input type="hidden" th:value="${newArticle.id}" name="id"/>
+        <input type="text" th:field="*{title}" class="app-input" th:value="${newArticle.title}"
+               placeholder="Title" name="title"/>
+        <textarea rows="50" class="app-input" placeholder="Body" th:value="${newArticle.body}"
+            th:field="*{body}" name="body"></textarea>
+        <input type="submit" value="Save" class="app-btn" style="background:blue;"/>
+    </form>
+</div>
+
+<footer class="app-footer"></footer>
+</body>
+</html>

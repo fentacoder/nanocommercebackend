@@ -1,0 +1,6 @@
+CREATE TABLE PasswordReset(
+    id UUID NOT NULL PRIMARY KEY,
+    userId UUID NOT NULL,
+    createdAt DATE DEFAULT(CURRENT_TIMESTAMP),
+    CONSTRAINT fk_user FOREIGN KEY (userId) REFERENCES Users(id)
+);

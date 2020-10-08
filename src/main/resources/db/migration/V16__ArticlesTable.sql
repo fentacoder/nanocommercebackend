@@ -1,0 +1,9 @@
+CREATE TABLE Articles(
+    id UUID NOT NULL PRIMARY KEY,
+    rowNum BIGSERIAL NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    body TEXT NOT NULL,
+    image bytea NULL,
+    imageType VARCHAR(20) NULL,
+    createdAt DATE DEFAULT(CURRENT_TIMESTAMP)
+);

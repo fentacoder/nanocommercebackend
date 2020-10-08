@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Nano Commerce API</title>
+    <link rel="stylesheet" th:href="@{/../static/css/styles.css}" type="text/css">
+    <link rel="icon" th:href="@{/../static/files/images/logo.png}">
+    <!--[if lt IE 9]><script src="scripts/html5shiv.js"></script><![endif]-->
+</head>
+<body th:style="'background:' + @{theme} + ';'">
+    <header class="app-header">
+        <div th:class="${themeBtn}"></div>
+    </header>
+
+    <h1 style="width: 100%;text-align:center;margin-bottom:3vh;">Users</h1>
+
+    <h1 style="width: 100%;text-align:center;margin-bottom:3vh;" th:Text="${'Currently ' + userNum + ' users'}">Currently ${userNum} users</h1>
+
+    <div class="item-list" >
+        <div class="list-item" th:each="user : ${users}">
+            <!--name and joined at-->
+            <div style="width:100%;font-weight:bold;margin-bottom:1vh;" th:text="${user.firstName + ' ' + user.lastName}">
+                <span style="color:#ccc;font-weight:normal;" th:text="${'-joined at ' + user.createdAt}"></span>
+            </div>
+
+            <!--email,phone number and twitter-->
+            <div style="width:100%;font-weight:bold;margin-bottom:1vh;">
+                <span th:text="${'email - ' + user.email}"></span>
+                <br>
+                <span th:text="${'phone number - ' + user.phoneNumber}"></span>
+                <br>
+                <span th:text="${'twitter username - ' + user.twitter}"></span>
+            </div>
+
+            <!--city and state-->
+            <div style="width:100%;font-weight:bold;margin-bottom:1vh;">
+                <span th:text="${user.city + ', ' + user.state}"></span>
+            </div>
+
+            <!--user bio-->
+            <div style="width:100%;font-weight:bold;margin-bottom:1vh;text-align:center;" th:text="${user.bio}">
+            </div>
+
+            <!--admin buttons-->
+            <div style="width:100%;display:flex;justify-content:center;margin-bottom:1vh;">
+                <a th:href="@{/accounts/address/{userId}(userId=${user.id})}" class="app-btn"
+                   style="background:blue;margin-right:1vh;">Address</a>
+                <a th:href="@{/accounts/suspend/{userId}(userId=${user.id})}" class="app-btn"
+                   style="background:orange;margin-right:1vh;">Suspend</a>
+                <a th:href="@{/accounts/delete/{userId}(userId=${user.id})}" class="app-btn"
+                   style="background:red;">Delete</a>
+            </div>
+
+            <!--separator-->
+            <div style="height:2px;width:100%;border:none;background:#888;"></div>
+        </div>
+    </div>
+
+    <footer class="app-footer"></footer>
+</body>
+</html>

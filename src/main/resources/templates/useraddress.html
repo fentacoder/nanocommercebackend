@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Nano Commerce API</title>
+    <link rel="stylesheet" th:href="@{/../static/css/styles.css}" type="text/css">
+    <link rel="icon" th:href="@{/../static/files/images/logo.png}">
+    <!--[if lt IE 9]><script src="scripts/html5shiv.js"></script><![endif]-->
+</head>
+<body th:style="'background:' + @{theme} + ';'">
+    <header class="app-header">
+        <div th:class="${themeBtn}"></div>
+    </header>
+
+    <h1 style="width: 100%;text-align:center;margin-bottom:3vh;">Users</h1>
+
+    <div class="form-container">
+        <form th:action="@{/accounts/address}" method="post" th:object="${userAddress}" class="app-form">
+            <input type="hidden" th:value="${userAddress.userId}"/>
+            <label class="app-label">Street:</label>
+            <input type="text" th:field="*{street}" class="app-input" th:value="${userAddress.street}"
+                placeholder="Street"/>
+            <label class="app-label">Additional Info:</label>
+            <input type="text" th:field="*{additionalInfo}" class="app-input" th:value="${userAddress.additionalInfo}"
+                placeholder="Apt. num/suite num"/>
+            <label class="app-label">City:</label>
+            <input type="text" th:field="*{city}" class="app-input" th:value="${userAddress.city}"
+                placeholder="City"/>
+            <label class="app-label">State:</label>
+            <input type="text" th:field="*{state}" class="app-input" th:value="${userAddress.state}"
+                placeholder="State"/>
+            <label class="app-label">Zip Code:</label>
+            <input type="text" th:field="*{zipCode}" class="app-input" th:value="${userAddress.zipCode}"
+                placeholder="Zip code"/>
+
+            <input type="submit" value="Save" class="app-btn" style="background:blue;"/>
+        </form>
+    </div>
+
+    <footer class="app-footer"></footer>
+</body>
+</html>

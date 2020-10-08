@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Nano Commerce API</title>
+    <link rel="stylesheet" th:href="@{/../static/css/styles.css}" type="text/css">
+    <link rel="icon" th:href="@{/../static/files/images/logo.png}">
+    <!--[if lt IE 9]><script src="scripts/html5shiv.js"></script><![endif]-->
+</head>
+<body th:style="'background:' + @{theme} + ';'">
+<header class="app-header">
+    <div th:class="${themeBtn}"></div>
+</header>
+
+<h1 style="width: 100%;text-align:center;margin-bottom:3vh;">Posts</h1>
+
+<h1 style="width: 100%;text-align:center;margin-bottom:3vh;" th:text="${'Currently ' + postNum + ' posts'}">Currently ${postNum} posts</h1>
+
+<div class="item-list" >
+    <div class="list-item" th:each="post : ${posts}">
+        <!--post title-->
+        <div style="width:100%;font-weight:bold;margin-bottom:1vh;" th:text="${post.title}">
+            <span style="color:#ccc;font-weight:normal;" th:text="${'- created at ' + post.createdAt}"></span>
+        </div>
+
+        <!--post message-->
+        <div style="width:100%;font-weight:bold;margin-bottom:1vh;" th:text="${post.message}">
+        </div>
+
+        <!--post likes-->
+        <div style="width:100%;font-weight:bold;margin-bottom:1vh;">
+            <span style="color:#ccc;font-weight:normal;" th:text="${post.likes + ' likes'}">${post.likes} likes</span>
+        </div>
+
+        <!--admin buttons-->
+        <div style="width:100%;display:flex;justify-content:center;margin-bottom:1vh;">
+            <a th:href="@{/posts/delete/{postId}(postId=${post.id})}" class="app-btn"
+               style="background:red;">Delete</a>
+        </div>
+
+        <!--separator-->
+        <div style="height:2px;width:100%;border:none;background:#888;"></div>
+    </div>
+</div>
+
+<footer class="app-footer"></footer>
+</body>
+</html>

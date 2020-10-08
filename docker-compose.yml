@@ -1,0 +1,63 @@
+version: '3'
+services:
+    db: 
+        image: postgres:10.12-alpine
+        ports:
+        - '5432:5432'
+        environment:
+        - POSTGRES_PASSWORD=postgres user password
+        - POSTGRES_DB=database_name
+        volumes:
+        - '/database_name/pgdatadb:/var/lib/postgresql/data'
+        restart: unless-stopped
+    api:
+        build: 
+            context: .
+            dockerfile: Dockerfile
+        ports: 
+            - "8080:8080"
+        depends_on: 
+            - db
+        labels:
+            - "traefik.docker.network=NetworkName-Net"
+            - "traefik.enable=true"
+            - "traefik.port=8080"
+            - "traefik.http.routers.war_file_name.rule=Host(`domain name`)"
+            - "traefik.http.routers.war_file_name.tls=true"
+            - "traefik.http.routers.war_file_name.tls.certresolver=le"
+            - "traefik.http.routers.war_file_name.tls.domains[0].sans=domain name"
+
+
+    reverse-proxy:
+        image: traefik:v2.0
+        # Enables the web UI and tells Traefik to listen to docker
+        command:
+            - "--entryPoints.web.address=:80"
+            - "--entryPoints.websecure.address=:443"
+            - "--api.insecure=true"
+            - "--providers.docker=true"
+            - "--providers.docker.exposedbydefault=false"
+            - "--accesslog=true"
+            - "--accesslog.filepath=/var/log/traefik-access.log"
+            - "--accesslog.bufferingsize=1000"
+            - "--log.filePath=/var/log/traefik.log"
+            - "--certificatesResolvers.le.acme.email=email used to sign certificates"
+            - "--certificatesResolvers.le.acme.storage=acme.json"
+            - "--certificatesResolvers.le.acme.httpChallenge.entryPoint=web"
+
+        ports:
+            # The HTTP port
+            - "80:80"
+            - "443:443"
+            # The Web UI (enabled by --api.insecure=true)
+            - "8085:8080"
+        volumes:
+            # So that Traefik can listen to the Docker events
+            - /var/run/docker.sock:/var/run/docker.sock
+        restart: always
+
+
+networks:
+    default:
+        external:
+            name: NetworkName-Net

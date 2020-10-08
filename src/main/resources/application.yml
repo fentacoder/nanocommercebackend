@@ -1,0 +1,73 @@
+spring:
+  paypal:
+    mode: sandbox
+    client:
+      #sandbox
+      id: ""
+      secret: ""
+      #production
+      #id:
+      #secret:
+  debug: true
+  logging:
+    level:
+      root: ERROR
+      org.springframework.web: ERROR
+    file: /logs/application-debug.log
+    pattern:
+      file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+      console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  datasource:
+    username: postgres
+    password: smartman3
+    pool-size: 30
+    dbcp2:
+      url: jdbc:postgresql://db:5432/nanocommercedb
+  resources:
+    add-mappings: true
+    static-locations: classpath:/META-INF/resources/,classpath:/resources/,classpath:/resources/static/
+  http:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+  server:
+    max-http-header-size: 10000000
+    error:
+      include-stacktrace: always
+    ssl:
+      enabled: true
+      key-store-type: PKCS12
+      key-store: classpath:keystore.p12
+      key-store-password: smartman3
+      key-alias: clientId
+      trust:
+        store: classpath:keystore.p12
+        store-password: smartman3
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: infotechnano3@gmail.com
+    password: smartman3
+    protocol: smtp
+    tls: true
+    properties:
+      mail:
+        smtp:
+          auth: true
+          enable: true
+          starttls:
+            enable: true
+          ssl:
+            trust: smtp.gmail.com
+
+  jpa:
+    show-sql: true
+  flyway:
+    enabled: false
+    validate-on-migrate: false
+    baselineOnMigrate: false
+    user: postgres
+    password: smartman3
+    schemas: public
+    url: jdbc:postgresql://db:5432/nanocommercedb
