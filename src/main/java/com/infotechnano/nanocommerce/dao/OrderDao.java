@@ -14,8 +14,9 @@ import java.util.UUID;
 public interface OrderDao {
     Payment createPayment(Double total,String currency,String method,String intent,String description,String cancelUrl,String successUrl) throws PayPalRESTException;
     Payment executePayment(String paymentId,String payerId) throws PayPalRESTException;
-    HashMap<String,Object> getOrders();
-    List<Order> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound,String searchStr);
+    HashMap<String,Object> getOrders(String searchStr,String filterConditions,String numPerPage,String orderByConditions);
+    List<Order> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound,
+                         String filterConditions,String numPerPage,String searchStr,String orderByCondition);
     Order getOrder(UUID orderId);
     Integer save(Order order);
     Integer delete (UUID orderId);

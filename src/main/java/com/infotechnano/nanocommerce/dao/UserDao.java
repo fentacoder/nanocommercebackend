@@ -4,6 +4,7 @@ import com.infotechnano.nanocommerce.models.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,4 +35,7 @@ public interface UserDao {
     Integer changeAddress(Address address);
     User getUser(UUID userId);
     List<Activity> getActivities(UUID hostId);
+    HashMap<String,Object> grabUsers(String searchStr,String filterConditions,String numPerPage,String orderByConditions);
+    List<User> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound,
+                        String filterConditions,String numPerPage,String searchStr,String orderByCondition);
 }

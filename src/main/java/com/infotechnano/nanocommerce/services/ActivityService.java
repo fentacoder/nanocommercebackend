@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,17 +28,25 @@ public class ActivityService implements ActivityDao {
     }
 
     @Override
-    public HashMap<String, Object> grabActivities() {
+    public HashMap<String, Object> grabActivities(String searchStr,String filterConditions,String numPerPage,String orderByCondition) {
         try {
-            String sql = "SELECT * FROM Activities ORDER BY createdAt DESC LIMIT 25";
-            String countSql = "SELECT COUNT(id) AS itemCount FROM Activities";
-            int itemCount = jdbcTemplate.queryForObject(countSql,(resultSet,i) -> {
+            String sql;
+            if(filterConditions.length() > 0 && orderByCondition.length() > 0){
+                sql = "SELECT * FROM Activities WHERE title LIKE ? " + filterConditions + " " + orderByCondition + " LIMIT " + numPerPage;
+            }else if(filterConditions.length() > 0){
+                sql = "SELECT * FROM Activities WHERE title LIKE ? " + filterConditions + "ORDER BY createdAt DESC LIMIT " + numPerPage;
+            }else{
+                sql = "SELECT * FROM Activities WHERE title LIKE ? ORDER BY createdAt DESC LIMIT " + numPerPage;
+            }
+            String countSql = "SELECT COUNT(id) AS itemCount FROM Activities WHERE title LIKE ? " + (filterConditions.length() > 0 ?
+                    ("AND " + filterConditions) : null);
+            int itemCount = jdbcTemplate.queryForObject(countSql,new Object[]{"%" + searchStr + "%"},(resultSet,i) -> {
                 if(resultSet.wasNull()){
                     return 0;
                 }
                 return resultSet.getInt("itemCount");
             });
-            List<Activity> tempList = jdbcTemplate.query(sql,objectMapper.mapActivity());
+            List<Activity> tempList = jdbcTemplate.query(sql,new Object[]{"%" + searchStr + "%"},objectMapper.mapActivity());
             HashMap<String,Object> tempDict = new HashMap<>();
             tempDict.put("itemCount",itemCount);
             tempDict.put("itemList",tempList);
@@ -49,20 +58,39 @@ public class ActivityService implements ActivityDao {
     }
 
     @Override
-    public List<Activity> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound,String searchStr) {
+    public List<Activity> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound,
+                                   String filterConditions,String numPerPage,String searchStr,String orderByCondition) {
+        String sql;
+        String lastPageStr;
+        String skippedStr;
+        if(filterConditions.length() > 0 && orderByCondition.length() > 0){
+            sql = "SELECT * FROM Activities WHERE title LIKE ? AND " + filterConditions;
+            skippedStr = "FROM Activities WHERE title LIKE ? AND " + filterConditions;
+            lastPageStr = "SELECT * FROM Activities WHERE title LIKE ? AND " + filterConditions + " " + (orderByCondition.contains("createdAt") ?
+                    (orderByCondition.contains("ASC") ? " ORDER BY createdAt DESC " : " ORDER BY createdAt ASC ") : orderByCondition) + " LIMIT " + numPerPage;
+        }else if(filterConditions.length() > 0){
+            sql = "SELECT * FROM Activities WHERE title LIKE ? AND " + filterConditions;
+            skippedStr = "FROM Activities WHERE title LIKE ? AND " + filterConditions;
+            lastPageStr = "SELECT * FROM Activities WHERE title LIKE ? AND " + filterConditions + "ORDER BY createdAt ASC LIMIT " + numPerPage;
+        }else{
+            sql = "SELECT * FROM Activities WHERE title LIKE ?";
+            skippedStr = "FROM Activities WHERE title LIKE ?";
+            lastPageStr = "SELECT * FROM Activities WHERE title LIKE ? ORDER BY createdAt ASC LIMIT " + numPerPage;
+        }
+
         if(currentPage == 1){
-            return jdbcTemplate.query("SELECT * FROM Activities WHERE title LIKE ? ORDER BY createdAt DESC LIMIT 25",
+            return jdbcTemplate.query(sql + (orderByCondition.length() > 0 ? orderByCondition : " ORDER BY createdAt DESC")  + " LIMIT " + numPerPage,
                     new Object[]{"%" + searchStr.trim().toLowerCase() + "%"},
                     objectMapper.mapActivity());
         }else if(lastPage){
-            return jdbcTemplate.query("SELECT * FROM Activities WHERE title LIKE ? ORDER BY createdAt ASC LIMIT 25",
+            return jdbcTemplate.query(lastPageStr,
                     new Object[]{"%" + searchStr.trim().toLowerCase() + "%"},
                     objectMapper.mapActivity());
         }else if(skipped > 0){
             Integer multiplier = skipped * 25;
             if(earlier){
-                int minIdx = jdbcTemplate.queryForObject("SELECT MIN(rowNum) AS minId FROM Activities WHERE title LIKE ? " +
-                                "AND rowNum < ? ORDER BY createdAt DESC LIMIT ?",
+                int minIdx = jdbcTemplate.queryForObject("SELECT MIN(rowNum) AS minId " + skippedStr +
+                                " AND rowNum < ? " + (orderByCondition.length() > 0 ? orderByCondition : "ORDER BY createdAt DESC")  + " LIMIT " + numPerPage,
                         new Object[]{"%" + searchStr.trim().toLowerCase() + "%",idxBound,multiplier},
                         (resultSet,i) -> {
                             if(resultSet.wasNull()){
@@ -70,12 +98,12 @@ public class ActivityService implements ActivityDao {
                             }
                             return resultSet.getInt("minId");
                         });
-                return jdbcTemplate.query("SELECT * FROM Activities WHERE title LIKE ? AND rowNum < ? ORDER BY createdAt DESC LIMIT 25",
+                return jdbcTemplate.query("SELECT * " + skippedStr + " AND rowNum < ? " + (orderByCondition.length() > 0 ? orderByCondition : "ORDER BY createdAt DESC") + " LIMIT " + numPerPage,
                         new Object[]{"%" + searchStr.trim().toLowerCase() + "%",minIdx},
                         objectMapper.mapActivity());
             }else{
-                int maxIdx = jdbcTemplate.queryForObject("SELECT MAX(rowNum) AS maxId FROM Activities WHERE title LIKE ? " +
-                                "AND rowNum > ? ORDER BY createdAt DESC LIMIT ?",
+                int maxIdx = jdbcTemplate.queryForObject("SELECT MAX(rowNum) AS maxId " + skippedStr +
+                                " AND rowNum > ? " + (orderByCondition.length() > 0 ? orderByCondition : "ORDER BY createdAt DESC")  + " LIMIT " + numPerPage,
                         new Object[]{"%" + searchStr.trim().toLowerCase() + "%",idxBound,multiplier},
                         (resultSet,i) -> {
                             if(resultSet.wasNull()){
@@ -83,16 +111,16 @@ public class ActivityService implements ActivityDao {
                             }
                             return resultSet.getInt("maxId");
                         });
-                return jdbcTemplate.query("SELECT * FROM Activities WHERE title LIKE ? AND rowNum > ? ORDER BY createdAt DESC LIMIT 25",
+                return jdbcTemplate.query("SELECT * " + skippedStr + " AND rowNum > ? " + (orderByCondition.length() > 0 ? orderByCondition : "ORDER BY createdAt DESC") + " LIMIT " + numPerPage,
                         new Object[]{"%" + searchStr.trim().toLowerCase() + "%",maxIdx},
                         objectMapper.mapActivity());
             }
         }else if(earlier){
-            return jdbcTemplate.query("SELECT * FROM Activities WHERE title LIKE ? AND rowNum < ? ORDER BY createdAt DESC LIMIT 25",
+            return jdbcTemplate.query(sql + " AND rowNum < ? " + (orderByCondition.length() > 0 ? orderByCondition : " ORDER BY createdAt DESC")  + " LIMIT " + numPerPage,
                     new Object[]{"%" + searchStr.trim().toLowerCase() + "%",idxBound},
                     objectMapper.mapActivity());
         }else if(!earlier){
-            return jdbcTemplate.query("SELECT * FROM Activities WHERE title LIKE ? AND rowNum > ? ORDER BY createdAt DESC LIMIT 25",
+            return jdbcTemplate.query(sql + " AND rowNum > ? " + (orderByCondition.length() > 0 ? orderByCondition : " ORDER BY createdAt DESC")  + " LIMIT " + numPerPage,
                     new Object[]{"%" + searchStr.trim().toLowerCase() + "%",idxBound},
                     objectMapper.mapActivity());
         }
@@ -131,8 +159,8 @@ public class ActivityService implements ActivityDao {
         String sql = "INSERT INTO Activities (id,hostId,title,location,price,details,breakDescription" +
                 ",activityDate,activityTime) VALUES (?,?,?,?,?,?,?,?,?)";
         jdbcTemplate.update(sql,id,activity.getHostId(),activity.getTitle(),activity.getLocation(),
-                activity.getPrice(),activity.getDetails(),activity.getBreakDescription(),activity.getActivityDate(),
-                activity.getActivityTime());
+                activity.getPrice(),activity.getDetails(),activity.getActivityDescription(),activity.getActivityEndDate(),
+                activity.getActivityEndTime());
         return id;
     }
 

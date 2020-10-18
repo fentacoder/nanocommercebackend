@@ -236,4 +236,29 @@ public class UserController {
             return null;
         }
     }
+
+    @PostMapping(path = "getactivities")
+    public HashMap<String,Object> getAll(@RequestBody HashMap<String,String> tempDict){
+        try {
+            return userService.grabUsers(tempDict.get("searchStr"),tempDict.get("filterConditions"),
+                    tempDict.get("numPerPage"),tempDict.get("orderByCondition"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    @PostMapping(path = "paginate")
+    public List<User> paginate(@PathVariable String searchStr,@RequestBody HashMap<String,String> tempDict){
+        try{
+            return userService.paginate(Integer.parseInt(tempDict.get("currentPage")),
+                    Boolean.parseBoolean(tempDict.get("earlier")),Boolean.parseBoolean(tempDict.get("lastPage")),
+                    Integer.parseInt(tempDict.get("skipped")),Integer.parseInt(tempDict.get("idxBound")),
+                    tempDict.get("filterConditions"),tempDict.get("numPerPage"),tempDict.get("searchStr"),
+                    tempDict.get("orderByCondition"));
+        }catch (Exception e){
+            e.printStackTrace();
+            return null;
+        }
+    }
 }

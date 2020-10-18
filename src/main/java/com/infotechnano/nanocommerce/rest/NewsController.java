@@ -1,5 +1,6 @@
 package com.infotechnano.nanocommerce.rest;
 
+import com.infotechnano.nanocommerce.models.Activity;
 import com.infotechnano.nanocommerce.models.Article;
 import com.infotechnano.nanocommerce.models.ArticleImage;
 import com.infotechnano.nanocommerce.services.NewsService;
@@ -38,25 +39,27 @@ public class NewsController {
     @PostMapping(path = "getall")
     public HashMap<String, Object> getAll(@RequestBody HashMap<String,String> tempDict){
         try {
-            return newsService.grabNews();
+            return newsService.grabNews(tempDict.get("searchStr"),tempDict.get("filterConditions"),
+                    tempDict.get("numPerPage"),tempDict.get("orderByCondition"));
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
     }
 
-    @PostMapping(path = "paginate/{searchStr}")
-    public List<Article> paginate(@PathVariable String searchStr, @RequestBody HashMap<String,String> tempDict){
+    @PostMapping(path = "paginate")
+    public List<Article> paginate(@RequestBody HashMap<String,String> tempDict){
         try{
             return newsService.paginate(Integer.parseInt(tempDict.get("currentPage")),
                     Boolean.parseBoolean(tempDict.get("earlier")),Boolean.parseBoolean(tempDict.get("lastPage")),
-                    Integer.parseInt(tempDict.get("skipped")),Integer.parseInt(tempDict.get("idxBound")),searchStr);
+                    Integer.parseInt(tempDict.get("skipped")),Integer.parseInt(tempDict.get("idxBound")),
+                    tempDict.get("filterConditions"),tempDict.get("numPerPage"),tempDict.get("searchStr"),
+                    tempDict.get("orderByCondition"));
         }catch (Exception e){
             e.printStackTrace();
             return null;
         }
     }
-
 
     @PostMapping(path = "grabimage")
     public ArticleImage grabImage(@RequestBody Map<String,String> tempDict){

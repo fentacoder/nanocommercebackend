@@ -92,25 +92,27 @@ public class PostController {
     @PostMapping(path = "retrieveall")
     public HashMap<String, Object> retrieveAll(@RequestBody HashMap<String,String> tempDict){
         try {
-            return postService.getPosts();
+            return postService.getPosts(tempDict.get("searchStr"),tempDict.get("filterConditions"),
+                    tempDict.get("numPerPage"),tempDict.get("orderByCondition"));
         } catch (NumberFormatException e) {
             e.printStackTrace();
             return null;
         }
     }
 
-    @PostMapping(path = "paginate/{searchStr}")
-    public List<Post> paginate(@PathVariable String searchStr, @RequestBody HashMap<String,String> tempDict){
+    @PostMapping(path = "paginate")
+    public List<Post> paginate(@RequestBody HashMap<String,String> tempDict){
         try{
             return postService.paginate(Integer.parseInt(tempDict.get("currentPage")),
                     Boolean.parseBoolean(tempDict.get("earlier")),Boolean.parseBoolean(tempDict.get("lastPage")),
-                    Integer.parseInt(tempDict.get("skipped")),Integer.parseInt(tempDict.get("idxBound")),searchStr);
+                    Integer.parseInt(tempDict.get("skipped")),Integer.parseInt(tempDict.get("idxBound")),
+                    tempDict.get("filterConditions"),tempDict.get("numPerPage"),tempDict.get("searchStr"),
+                    tempDict.get("orderByCondition"));
         }catch (Exception e){
             e.printStackTrace();
             return null;
         }
     }
-
 
     @PostMapping(path = "retrieveauthorimage")
     public Map<String,Object> retrieveAuthorImage(@RequestBody Map<String,String> tempDict){

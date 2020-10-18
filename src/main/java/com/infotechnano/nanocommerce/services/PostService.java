@@ -25,17 +25,25 @@ public class PostService implements PostDao {
     }
 
     @Override
-    public HashMap<String, Object> getPosts() {
+    public HashMap<String, Object> getPosts(String searchStr,String filterConditions,String numPerPage,String orderByCondition) {
         try {
-            String sql = "SELECT * FROM Posts ORDER BY createdAt DESC LIMIT 25";
-            String countSql = "SELECT COUNT(id) AS itemCount FROM Posts";
-            int itemCount = jdbcTemplate.queryForObject(countSql,(resultSet,i) -> {
+            String sql;
+            if(filterConditions.length() > 0 && orderByCondition.length() > 0){
+                sql = "SELECT * FROM Posts WHERE title LIKE ? " + filterConditions + " " + orderByCondition + " LIMIT " + numPerPage;
+            }else if(filterConditions.length() > 0){
+                sql = "SELECT * FROM Posts WHERE title LIKE ? " + filterConditions + "ORDER BY createdAt DESC LIMIT " + numPerPage;
+            }else{
+                sql = "SELECT * FROM Posts WHERE title LIKE ? ORDER BY createdAt DESC LIMIT " + numPerPage;
+            }
+            String countSql = "SELECT COUNT(id) AS itemCount FROM Posts WHERE title LIKE ? " + (filterConditions.length() > 0 ?
+                    ("AND " + filterConditions) : null);
+            int itemCount = jdbcTemplate.queryForObject(countSql,new Object[]{"%" + searchStr + "%"},(resultSet,i) -> {
                 if(resultSet.wasNull()){
                     return 0;
                 }
                 return resultSet.getInt("itemCount");
             });
-            List<Post> tempList = jdbcTemplate.query(sql,objectMapper.mapPost());
+            List<Post> tempList = jdbcTemplate.query(sql,new Object[]{"%" + searchStr + "%"},objectMapper.mapPost());
             HashMap<String,Object> tempDict = new HashMap<>();
             tempDict.put("itemCount",itemCount);
             tempDict.put("itemList",tempList);
@@ -47,20 +55,39 @@ public class PostService implements PostDao {
     }
 
     @Override
-    public List<Post> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound, String searchStr) {
+    public List<Post> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound,
+                               String filterConditions,String numPerPage,String searchStr,String orderByCondition) {
+        String sql;
+        String lastPageStr;
+        String skippedStr;
+        if(filterConditions.length() > 0 && orderByCondition.length() > 0){
+            sql = "SELECT * FROM Posts WHERE title LIKE ? AND " + filterConditions;
+            skippedStr = "FROM Posts WHERE title LIKE ? AND " + filterConditions;
+            lastPageStr = "SELECT * FROM Posts WHERE title LIKE ? AND " + filterConditions + " " + (orderByCondition.contains("createdAt") ?
+                    (orderByCondition.contains("ASC") ? " ORDER BY createdAt DESC " : " ORDER BY createdAt ASC ") : orderByCondition) + " LIMIT " + numPerPage;
+        }else if(filterConditions.length() > 0){
+            sql = "SELECT * FROM Posts WHERE title LIKE ? AND " + filterConditions;
+            skippedStr = "FROM Posts WHERE title LIKE ? AND " + filterConditions;
+            lastPageStr = "SELECT * FROM Posts WHERE title LIKE ? AND " + filterConditions + "ORDER BY createdAt ASC LIMIT " + numPerPage;
+        }else{
+            sql = "SELECT * FROM Posts WHERE title LIKE ?";
+            skippedStr = "FROM Posts WHERE title LIKE ?";
+            lastPageStr = "SELECT * FROM Posts WHERE title LIKE ? ORDER BY createdAt ASC LIMIT " + numPerPage;
+        }
+
         if(currentPage == 1){
-            return jdbcTemplate.query("SELECT * FROM Posts WHERE title LIKE ? ORDER BY createdAt DESC LIMIT 25",
+            return jdbcTemplate.query(sql + (orderByCondition.length() > 0 ? orderByCondition : " ORDER BY createdAt DESC")  + " LIMIT " + numPerPage,
                     new Object[]{"%" + searchStr.trim().toLowerCase() + "%"},
                     objectMapper.mapPost());
         }else if(lastPage){
-            return jdbcTemplate.query("SELECT * FROM Posts WHERE title LIKE ? ORDER BY createdAt ASC LIMIT 25",
+            return jdbcTemplate.query(lastPageStr,
                     new Object[]{"%" + searchStr.trim().toLowerCase() + "%"},
                     objectMapper.mapPost());
         }else if(skipped > 0){
             Integer multiplier = skipped * 25;
             if(earlier){
-                int minIdx = jdbcTemplate.queryForObject("SELECT MIN(rowNum) AS minId FROM Posts WHERE title LIKE ? " +
-                                "AND rowNum < ? ORDER BY createdAt DESC LIMIT ?",
+                int minIdx = jdbcTemplate.queryForObject("SELECT MIN(rowNum) AS minId " + skippedStr +
+                                " AND rowNum < ? " + (orderByCondition.length() > 0 ? orderByCondition : "ORDER BY createdAt DESC")  + " LIMIT " + numPerPage,
                         new Object[]{"%" + searchStr.trim().toLowerCase() + "%",idxBound,multiplier},
                         (resultSet,i) -> {
                             if(resultSet.wasNull()){
@@ -68,12 +95,12 @@ public class PostService implements PostDao {
                             }
                             return resultSet.getInt("minId");
                         });
-                return jdbcTemplate.query("SELECT * FROM Posts WHERE title LIKE ? AND rowNum < ? ORDER BY createdAt DESC LIMIT 25",
+                return jdbcTemplate.query("SELECT * " + skippedStr + " AND rowNum < ? " + (orderByCondition.length() > 0 ? orderByCondition : "ORDER BY createdAt DESC") + " LIMIT " + numPerPage,
                         new Object[]{"%" + searchStr.trim().toLowerCase() + "%",minIdx},
                         objectMapper.mapPost());
             }else{
-                int maxIdx = jdbcTemplate.queryForObject("SELECT MAX(rowNum) AS maxId FROM Posts WHERE title LIKE ? " +
-                                "AND rowNum > ? ORDER BY createdAt DESC LIMIT ?",
+                int maxIdx = jdbcTemplate.queryForObject("SELECT MAX(rowNum) AS maxId " + skippedStr +
+                                " AND rowNum > ? " + (orderByCondition.length() > 0 ? orderByCondition : "ORDER BY createdAt DESC")  + " LIMIT " + numPerPage,
                         new Object[]{"%" + searchStr.trim().toLowerCase() + "%",idxBound,multiplier},
                         (resultSet,i) -> {
                             if(resultSet.wasNull()){
@@ -81,16 +108,16 @@ public class PostService implements PostDao {
                             }
                             return resultSet.getInt("maxId");
                         });
-                return jdbcTemplate.query("SELECT * FROM Posts WHERE title LIKE ? AND rowNum > ? ORDER BY createdAt DESC LIMIT 25",
+                return jdbcTemplate.query("SELECT * " + skippedStr + " AND rowNum > ? " + (orderByCondition.length() > 0 ? orderByCondition : "ORDER BY createdAt DESC") + " LIMIT " + numPerPage,
                         new Object[]{"%" + searchStr.trim().toLowerCase() + "%",maxIdx},
                         objectMapper.mapPost());
             }
         }else if(earlier){
-            return jdbcTemplate.query("SELECT * FROM Posts WHERE title LIKE ? AND rowNum < ? ORDER BY createdAt DESC LIMIT 25",
+            return jdbcTemplate.query(sql + " AND rowNum < ? " + (orderByCondition.length() > 0 ? orderByCondition : " ORDER BY createdAt DESC")  + " LIMIT " + numPerPage,
                     new Object[]{"%" + searchStr.trim().toLowerCase() + "%",idxBound},
                     objectMapper.mapPost());
         }else if(!earlier){
-            return jdbcTemplate.query("SELECT * FROM Posts WHERE title LIKE ? AND rowNum > ? ORDER BY createdAt DESC LIMIT 25",
+            return jdbcTemplate.query(sql + " AND rowNum > ? " + (orderByCondition.length() > 0 ? orderByCondition : " ORDER BY createdAt DESC")  + " LIMIT " + numPerPage,
                     new Object[]{"%" + searchStr.trim().toLowerCase() + "%",idxBound},
                     objectMapper.mapPost());
         }

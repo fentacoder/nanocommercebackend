@@ -2,6 +2,7 @@ package com.infotechnano.nanocommerce.controllers;
 
 import com.infotechnano.nanocommerce.models.Product;
 import com.infotechnano.nanocommerce.services.ProductService;
+import com.infotechnano.nanocommerce.utils.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.servlet.http.HttpSession;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,10 +21,13 @@ import java.util.UUID;
 public class UserProductController {
 
     private final ProductService productService;
+    private final ObjectMapper objectMapper;
 
     @Autowired
-    public UserProductController(ProductService productService){
+    public UserProductController(ProductService productService,ObjectMapper objectMapper){
+
         this.productService = productService;
+        this.objectMapper = objectMapper;
     }
 
     @GetMapping(path = "listall")
@@ -30,7 +35,7 @@ public class UserProductController {
         model.addAttribute("theme",session.getAttribute("theme"));
         model.addAttribute("themeBtn",session.getAttribute("themeBtn"));
 
-        HashMap<String,Object> tempDict = productService.grabProducts();
+        HashMap<String,Object> tempDict = productService.grabProducts("","","25","");
         List<Product> productList = (List<Product>) tempDict.get("itemList");
         model.addAttribute("products",productList);
         model.addAttribute("productNum",productList.size());

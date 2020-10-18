@@ -17,8 +17,9 @@ public interface PostDao {
     Integer addThreePostImages(UUID postId, MultipartFile image1, String image1Type,
                              MultipartFile image2, String image2Type, MultipartFile image3, String image3Type) throws IOException;
     UUID addPost(Post post);
-    HashMap<String,Object> getPosts();
-    List<Post> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound,String searchStr);
+    HashMap<String,Object> getPosts(String searchStr,String filterConditions,String numPerPage,String orderByConditions);
+    List<Post> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound,
+                        String filterConditions,String numPerPage,String searchStr,String orderByCondition);
     Map<String,Object> retrieveAuthorImage(UUID userId);
     List<PostImage> retrieveImages(UUID postId);
     String grabAuthorName(UUID userId);

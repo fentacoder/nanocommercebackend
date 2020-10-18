@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface BidDao {
     Integer addBid(Bid bid);
-    List<Bid> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound);
+    List<Bid> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound,String filterConditions
+            ,String numPerPage,String orderByCondition);
 }

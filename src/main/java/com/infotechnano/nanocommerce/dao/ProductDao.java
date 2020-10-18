@@ -11,8 +11,9 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ProductDao {
-    HashMap<String,Object> grabProducts();
-    List<Product> paginate(Integer currentPage,boolean earlier,boolean lastPage,Integer skipped,Integer idxBound,String searchStr);
+    HashMap<String,Object> grabProducts(String searchStr,String filterConditions,String numPerPage,String orderByConditions);
+    List<Product> paginate(Integer currentPage,boolean earlier,boolean lastPage,Integer skipped,Integer idxBound,
+                           String filterConditions,String numPerPage,String searchStr,String orderByCondition);
     Product retrieveSpecific(UUID productId);
     Integer bidNum(UUID productId);
     List<ProductImage> grabImage(UUID productId);

@@ -5,16 +5,23 @@ import com.infotechnano.nanocommerce.models.Bid;
 import com.infotechnano.nanocommerce.models.Order;
 import com.infotechnano.nanocommerce.utils.ObjectMapper;
 import com.infotechnano.nanocommerce.utils.StripeUtil;
+import com.paypal.api.payments.*;
+import com.paypal.base.rest.APIContext;
+import com.paypal.base.rest.PayPalRESTException;
 import com.stripe.exception.StripeException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.support.JdbcDaoSupport;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.sql.DataSource;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,11 +31,15 @@ public class OrderDaoService extends JdbcDaoSupport implements OrderDao {
 
     private final StripeUtil stripeUtil;
     private final ObjectMapper objectMapper;
+    private final JdbcTemplate jdbcTemplate;
 
     @Autowired
-    public OrderDaoService(DataSource dataSource, StripeUtil stripeUtil,ObjectMapper objectMapper) {
+    private APIContext apiContext;
 
-        this.setDataSource(dataSource);
+    @Autowired
+    public OrderDaoService(JdbcTemplate jdbcTemplate, StripeUtil stripeUtil, ObjectMapper objectMapper) {
+
+        this.jdbcTemplate = jdbcTemplate;
         this.stripeUtil = stripeUtil;
         this.objectMapper = objectMapper;
     }
@@ -73,17 +84,25 @@ public class OrderDaoService extends JdbcDaoSupport implements OrderDao {
     }
 
     @Override
-    public HashMap<String, Object> getOrders() {
+    public HashMap<String, Object> getOrders(String searchStr,String filterConditions,String numPerPage,String orderByCondition) {
         try {
-            String sql = "SELECT * FROM Activities ORDER BY createdAt DESC LIMIT 25";
-            String countSql = "SELECT COUNT(id) AS itemCount FROM Activities";
-            int itemCount = jdbcTemplate.queryForObject(countSql,(resultSet,i) -> {
+            String sql;
+            if(filterConditions.length() > 0 && orderByCondition.length() > 0){
+                sql = "SELECT * FROM Orders WHERE username LIKE ? " + filterConditions + " " + orderByCondition + " LIMIT " + numPerPage;
+            }else if(filterConditions.length() > 0){
+                sql = "SELECT * FROM Orders WHERE username LIKE ? " + filterConditions + "ORDER BY createdAt DESC LIMIT " + numPerPage;
+            }else{
+                sql = "SELECT * FROM Orders WHERE username LIKE ? ORDER BY createdAt DESC LIMIT " + numPerPage;
+            }
+            String countSql = "SELECT COUNT(id) AS itemCount FROM Orders WHERE username LIKE ? " + (filterConditions.length() > 0 ?
+                    ("AND " + filterConditions) : null);
+            int itemCount = jdbcTemplate.queryForObject(countSql,new Object[]{"%" + searchStr + "%"},(resultSet,i) -> {
                 if(resultSet.wasNull()){
                     return 0;
                 }
                 return resultSet.getInt("itemCount");
             });
-            List<Order> tempList = jdbcTemplate.query(sql,objectMapper.mapOrder());
+            List<Order> tempList = jdbcTemplate.query(sql,new Object[]{"%" + searchStr + "%"},objectMapper.mapOrder());
             HashMap<String,Object> tempDict = new HashMap<>();
             tempDict.put("itemCount",itemCount);
             tempDict.put("itemList",tempList);
@@ -95,20 +114,39 @@ public class OrderDaoService extends JdbcDaoSupport implements OrderDao {
     }
 
     @Override
-    public List<Order> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound, String searchStr) {
+    public List<Order> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound,
+                                String filterConditions,String numPerPage,String searchStr,String orderByCondition) {
+        String sql;
+        String lastPageStr;
+        String skippedStr;
+        if(filterConditions.length() > 0 && orderByCondition.length() > 0){
+            sql = "SELECT * FROM Orders WHERE username LIKE ? AND " + filterConditions;
+            skippedStr = "FROM Orders WHERE username LIKE ? AND " + filterConditions;
+            lastPageStr = "SELECT * FROM Orders WHERE username LIKE ? AND " + filterConditions + " " + (orderByCondition.contains("createdAt") ?
+                    (orderByCondition.contains("ASC") ? " ORDER BY createdAt DESC " : " ORDER BY createdAt ASC ") : orderByCondition) + " LIMIT " + numPerPage;
+        }else if(filterConditions.length() > 0){
+            sql = "SELECT * FROM Orders WHERE username LIKE ? AND " + filterConditions;
+            skippedStr = "FROM Orders WHERE username LIKE ? AND " + filterConditions;
+            lastPageStr = "SELECT * FROM Orders WHERE username LIKE ? AND " + filterConditions + "ORDER BY createdAt ASC LIMIT " + numPerPage;
+        }else{
+            sql = "SELECT * FROM Orders WHERE username LIKE ?";
+            skippedStr = "FROM Orders WHERE username LIKE ?";
+            lastPageStr = "SELECT * FROM Orders WHERE title LIKE ? ORDER BY createdAt ASC LIMIT " + numPerPage;
+        }
+
         if(currentPage == 1){
-            return jdbcTemplate.query("SELECT * FROM Orders WHERE username LIKE ? ORDER BY createdAt DESC LIMIT 25",
+            return jdbcTemplate.query(sql + (orderByCondition.length() > 0 ? orderByCondition : " ORDER BY createdAt DESC")  + " LIMIT " + numPerPage,
                     new Object[]{"%" + searchStr.trim().toLowerCase() + "%"},
                     objectMapper.mapOrder());
         }else if(lastPage){
-            return jdbcTemplate.query("SELECT * FROM Orders WHERE username LIKE ? ORDER BY createdAt ASC LIMIT 25",
+            return jdbcTemplate.query(lastPageStr,
                     new Object[]{"%" + searchStr.trim().toLowerCase() + "%"},
                     objectMapper.mapOrder());
         }else if(skipped > 0){
             Integer multiplier = skipped * 25;
             if(earlier){
-                int minIdx = jdbcTemplate.queryForObject("SELECT MIN(rowNum) AS minId FROM Orders WHERE username LIKE ? " +
-                                "AND rowNum < ? ORDER BY createdAt DESC LIMIT ?",
+                int minIdx = jdbcTemplate.queryForObject("SELECT MIN(rowNum) AS minId " + skippedStr +
+                                " AND rowNum < ? " + (orderByCondition.length() > 0 ? orderByCondition : "ORDER BY createdAt DESC")  + " LIMIT " + numPerPage,
                         new Object[]{"%" + searchStr.trim().toLowerCase() + "%",idxBound,multiplier},
                         (resultSet,i) -> {
                             if(resultSet.wasNull()){
@@ -116,12 +154,12 @@ public class OrderDaoService extends JdbcDaoSupport implements OrderDao {
                             }
                             return resultSet.getInt("minId");
                         });
-                return jdbcTemplate.query("SELECT * FROM Orders WHERE username LIKE ? AND rowNum < ? ORDER BY createdAt DESC LIMIT 25",
+                return jdbcTemplate.query("SELECT * " + skippedStr + " AND rowNum < ? " + (orderByCondition.length() > 0 ? orderByCondition : "ORDER BY createdAt DESC") + " LIMIT " + numPerPage,
                         new Object[]{"%" + searchStr.trim().toLowerCase() + "%",minIdx},
                         objectMapper.mapOrder());
             }else{
-                int maxIdx = jdbcTemplate.queryForObject("SELECT MAX(rowNum) AS maxId FROM Orders WHERE username LIKE ? " +
-                                "AND rowNum > ? ORDER BY createdAt DESC LIMIT ?",
+                int maxIdx = jdbcTemplate.queryForObject("SELECT MAX(rowNum) AS maxId " + skippedStr +
+                                " AND rowNum > ? " + (orderByCondition.length() > 0 ? orderByCondition : "ORDER BY createdAt DESC")  + " LIMIT " + numPerPage,
                         new Object[]{"%" + searchStr.trim().toLowerCase() + "%",idxBound,multiplier},
                         (resultSet,i) -> {
                             if(resultSet.wasNull()){
@@ -129,30 +167,29 @@ public class OrderDaoService extends JdbcDaoSupport implements OrderDao {
                             }
                             return resultSet.getInt("maxId");
                         });
-                return jdbcTemplate.query("SELECT * FROM Orders WHERE username LIKE ? AND rowNum > ? ORDER BY createdAt DESC LIMIT 25",
+                return jdbcTemplate.query("SELECT * " + skippedStr + " AND rowNum > ? " + (orderByCondition.length() > 0 ? orderByCondition : "ORDER BY createdAt DESC") + " LIMIT " + numPerPage,
                         new Object[]{"%" + searchStr.trim().toLowerCase() + "%",maxIdx},
                         objectMapper.mapOrder());
             }
         }else if(earlier){
-            return jdbcTemplate.query("SELECT * FROM Orders WHERE username LIKE ? AND rowNum < ? ORDER BY createdAt DESC LIMIT 25",
+            return jdbcTemplate.query(sql + " AND rowNum < ? " + (orderByCondition.length() > 0 ? orderByCondition : " ORDER BY createdAt DESC")  + " LIMIT " + numPerPage,
                     new Object[]{"%" + searchStr.trim().toLowerCase() + "%",idxBound},
                     objectMapper.mapOrder());
         }else if(!earlier){
-            return jdbcTemplate.query("SELECT * FROM Orders WHERE username LIKE ? AND rowNum > ? ORDER BY createdAt DESC LIMIT 25",
+            return jdbcTemplate.query(sql + " AND rowNum > ? " + (orderByCondition.length() > 0 ? orderByCondition : " ORDER BY createdAt DESC")  + " LIMIT " + numPerPage,
                     new Object[]{"%" + searchStr.trim().toLowerCase() + "%",idxBound},
                     objectMapper.mapOrder());
         }
         return null;
     }
 
-
     @Override
     public Integer save(Order order) {
         UUID id = UUID.randomUUID();
         this.getJdbcTemplate().update(
-                "INSERT INTO Orders (id,userId,paypalOrderId,productId,bidAmount,processingFee,shippingFee,totalPrice) VALUES (?,?, ?,?,?,?,?,?)",
-                id,order.getUserId(),order.getPaypalOrderId(),order.getProductId(), order.getBidAmount(),order.getProcessingFee(),
-                order.getShippingFee(),order.getTotalPrice());
+                "INSERT INTO Orders (id,userId,paypalOrderId,itemId,type,bidAmount,processingFee,totalPrice) VALUES (?,?, ?,?,?,?,?,?,?)",
+                id,order.getUserId(),order.getPaypalOrderId(),order.getItemId(),order.getType(), order.getBidAmount(),order.getProcessingFee(),
+                order.getTotalPrice());
         return 1;
     }
 
@@ -216,7 +253,7 @@ public class OrderDaoService extends JdbcDaoSupport implements OrderDao {
 
     @Override
     public Order getId(UUID userId, UUID productId) {
-        String sql = "SELECT * FROM Orders WHERE userId=? AND productId=?";
+        String sql = "SELECT * FROM Orders WHERE userId=? AND productId=? LIMIT 1";
         try {
             return this.getJdbcTemplate().queryForObject(sql,new Object[]{userId,productId},objectMapper.mapOrder());
         } catch (DataAccessException e) {

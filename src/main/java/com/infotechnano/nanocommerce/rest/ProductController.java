@@ -39,10 +39,11 @@ public class ProductController {
         }
     }
 
-    @PostMapping(path = "getall")
+    @PostMapping(path = "getproducts")
     public HashMap<String, Object> getAll(@RequestBody HashMap<String,String> tempDict){
         try {
-            return productService.grabProducts();
+            return productService.grabProducts(tempDict.get("searchStr"),tempDict.get("filterConditions"),
+                    tempDict.get("numPerPage"),tempDict.get("orderByCondition"));
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -52,9 +53,11 @@ public class ProductController {
     @PostMapping(path = "paginate/{searchStr}")
     public List<Product> paginate(@PathVariable String searchStr, @RequestBody HashMap<String,String> tempDict){
         try{
-            return postService.paginate(Integer.parseInt(tempDict.get("currentPage")),
+            return productService.paginate(Integer.parseInt(tempDict.get("currentPage")),
                     Boolean.parseBoolean(tempDict.get("earlier")),Boolean.parseBoolean(tempDict.get("lastPage")),
-                    Integer.parseInt(tempDict.get("skipped")),Integer.parseInt(tempDict.get("idxBound")),searchStr);
+                    Integer.parseInt(tempDict.get("skipped")),Integer.parseInt(tempDict.get("idxBound")),
+                    tempDict.get("filterConditions"),tempDict.get("numPerPage"),tempDict.get("searchStr"),
+                    tempDict.get("orderByCondition"));
         }catch (Exception e){
             e.printStackTrace();
             return null;

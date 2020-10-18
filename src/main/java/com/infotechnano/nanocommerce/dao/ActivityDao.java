@@ -10,8 +10,9 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ActivityDao {
-    HashMap<String,Object> grabActivities();
-    List<Activity> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound,String searchStr);
+    HashMap<String,Object> grabActivities(String searchStr,String filterConditions,String numPerPage,String orderByConditions);
+    List<Activity> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound,
+                            String filterConditions,String numPerPage,String searchStr,String orderByCondition);
     Activity retrieveSpecific(UUID activityId);
     List<ActivityImage> retrieveSpecificImages(UUID activityId);
     Integer memberNum(UUID activityId);

@@ -10,8 +10,9 @@ import java.util.List;
 import java.util.UUID;
 
 public interface NewsDao {
-    HashMap<String,Object> grabNews();
-    List<Article> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound,String searchStr);
+    HashMap<String,Object> grabNews(String searchStr,String filterConditions,String numPerPage,String orderByConditions);
+    List<Article> paginate(Integer currentPage, boolean earlier, boolean lastPage, Integer skipped, Integer idxBound,
+                           String filterConditions,String numPerPage,String searchStr,String orderByCondition);
     List<ArticleImage> grabImage(UUID articleId);
     Article getSpecific(UUID articleId);
     Integer deleteArticle(UUID articleId);
